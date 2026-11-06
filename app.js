@@ -2,7 +2,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { Upload } from "https://cdn.jsdelivr.net/npm/tus-js-client@4/+esm";
 
 // Chỉ dùng Project URL + publishable/anon key ở frontend. Không dùng service_role.
-const SUPABASE_URL = "https://uhyzpobxcvjhuzdfjc.supabase.co";
+const SUPABASE_URL = "https://uhyzpobxcvjvhiuzdfjc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_x3pPpndZj9xlse0HFtn_UA_AopAieSD";
 const BUCKET = "public-files";
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
