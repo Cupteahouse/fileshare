@@ -53,6 +53,18 @@ function makeObjectPath(file, userId) {
   return `${userId}/${id}${ext ? "." + ext : ""}`;
 }
 function projectRefFromUrl() { return new URL(SUPABASE_URL).hostname.split(".")[0]; }
+function makeShareSlug(fileName) {
+  const base = String(fileName || "file")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d").replace(/Đ/g, "D")
+    .toLowerCase().replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "").slice(0, 70) || "file";
+  return `${base}-${crypto.randomUUID().slice(0, 8)}`;
+}
+function sharedSlugFromUrl() {
+  const match = location.hash.match(/^#\/f\/([a-z0-9-]+)$/i);
+  return match ? decodeURIComponent(match[1]) : null;
+}
 
 function updateAuthUI() {
   const signedIn = Boolean(currentUser);
@@ -118,7 +130,8 @@ async function uploadFile(file) {
       original_name: file.name,
       size_bytes: file.size,
       mime_type: file.type || "application/octet-stream",
-      owner_id: currentUser.id
+      owner_id: currentUser.id,
+      share_slug: makeShareSlug(file.name)
     });
     if (dbError) throw new Error("Tệp đã tải lên Storage nhưng chưa lưu được thông tin: " + dbError.message);
 
@@ -139,7 +152,7 @@ async function loadFiles() {
   if (!supabase) return;
   fileList.innerHTML = '<div class="empty-state">Đang tải danh sách tệp…</div>';
   const { data, error } = await supabase.from("files")
-    .select("id, object_path, original_name, size_bytes, mime_type, created_at, owner_id")
+    .select("id, object_path, original_name, size_bytes, mime_type, created_at, owner_id, share_slug")
     .order("created_at", { ascending: false }).limit(200);
   if (error) {
     console.error(error);
@@ -150,10 +163,16 @@ async function loadFiles() {
   allFiles = data || [];
   $("fileCount").textContent = `${allFiles.length} tệp gần đây`;
   renderFiles();
-  const sharedId = new URLSearchParams(location.search).get("file");
-  if (sharedId && !autoDownloaded.has(sharedId)) {
-    autoDownloaded.add(sharedId);
-    downloadFile(sharedId);
+  const sharedSlug = sharedSlugFromUrl();
+  const legacySharedId = new URLSearchParams(location.search).get("file");
+  if (sharedSlug) {
+    if (!autoDownloaded.has(sharedSlug)) {
+      autoDownloaded.add(sharedSlug);
+      openSharedFile(sharedSlug);
+    }
+  } else if (legacySharedId && !autoDownloaded.has(legacySharedId)) {
+    autoDownloaded.add(legacySharedId);
+    downloadFile(legacySharedId);
   }
 }
 
@@ -181,6 +200,17 @@ function renderFiles() {
   fileList.querySelectorAll("[data-delete]").forEach(btn => btn.addEventListener("click", () => deleteFile(btn.dataset.delete)));
 }
 
+async function openSharedFile(slug) {
+  try {
+    const { data, error } = await supabase.from("files")
+      .select("id").eq("share_slug", slug).single();
+    if (error) throw error;
+    await downloadFile(data.id);
+  } catch (error) {
+    console.error(error);
+    setStatus("Không tìm thấy tệp theo liên kết này. Có thể tệp đã bị xóa hoặc liên kết không đúng.", "error");
+  }
+}
 async function getFileRecord(id) {
   const { data, error } = await supabase.from("files").select("id, object_path, original_name").eq("id", id).single();
   if (error) throw error;
@@ -221,8 +251,10 @@ async function deleteFile(id) {
   }
 }
 async function copyLink(id) {
-  const url = new URL(location.href);
-  url.search = `?file=${encodeURIComponent(id)}`;
+  const record = allFiles.find(file => file.id === id);
+  if (!record?.share_slug) return setStatus("Không tìm thấy đường dẫn chia sẻ của tệp.", "error");
+  const url = new URL(location.pathname, location.origin);
+  url.hash = `/f/${encodeURIComponent(record.share_slug)}`;
   try {
     await navigator.clipboard.writeText(url.toString());
     setStatus("Đã sao chép liên kết tải tệp.", "success");
