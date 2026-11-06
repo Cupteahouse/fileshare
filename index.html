@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="FileShare - chia sẻ tệp công khai">
+  <title>FileShare — Chia sẻ tệp</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="FileShare trang chủ">
+      <span class="brand-mark">↥</span><span>FileShare</span>
+    </a>
+    <span class="status"><i></i> Public file space</span>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <p class="eyebrow">CHIA SẺ TỆP ĐƠN GIẢN</p>
+      <h1>Gửi tệp của bạn.<br><span>Chia sẻ với mọi người.</span></h1>
+      <p class="subhead">Ai cũng có thể xem và tải tệp. Đăng nhập để chia sẻ tệp của bạn.</p>
+    </section>
+
+    <section class="auth-card" aria-labelledby="auth-heading">
+      <div id="signedOutPanel">
+        <h2 id="auth-heading">Tài khoản FileShare</h2>
+        <p class="auth-help">Đăng ký miễn phí hoặc đăng nhập để tải tệp lên.</p>
+        <form id="authForm" class="auth-form">
+          <label for="authEmail">Email</label>
+          <input id="authEmail" type="email" autocomplete="email" placeholder="ban@example.com" required>
+          <label for="authPassword">Mật khẩu</label>
+          <input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Ít nhất 6 ký tự" required>
+          <div class="auth-actions">
+            <button id="signUpBtn" class="primary-btn" type="button">Tạo tài khoản</button>
+            <button id="signInBtn" class="secondary-btn" type="button">Đăng nhập</button>
+          </div>
+        </form>
+      </div>
+      <div id="signedInPanel" hidden>
+        <div class="signed-in-row"><div><h2>Đã đăng nhập</h2><p id="signedInEmail" class="auth-help"></p></div><button id="signOutBtn" class="secondary-btn" type="button">Đăng xuất</button></div>
+      </div>
+      <div id="authStatus" class="auth-status" aria-live="polite"></div>
+    </section>
+
+    <section class="upload-card" aria-labelledby="upload-heading">
+      <p id="uploadLoginHint" class="login-hint">Đăng nhập ở phía trên để tải tệp lên. Thư viện công khai vẫn có thể xem và tải mà không cần tài khoản.</p>
+      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Chọn hoặc kéo thả tệp">
+        <div class="upload-icon">↑</div>
+        <h2 id="upload-heading">Thả tệp vào đây</h2>
+        <p>hoặc <button id="browseBtn" class="text-button" type="button">chọn từ thiết bị</button></p>
+        <span class="limit">Tối đa 50 MB cho mỗi tệp</span>
+        <input id="fileInput" type="file" hidden>
+      </div>
+      <div id="uploadStatus" class="upload-status" aria-live="polite"></div>
+      <div id="progressWrap" class="progress-wrap" hidden>
+        <div class="progress-label"><span id="progressName">Đang tải lên…</span><strong id="progressPct">0%</strong></div>
+        <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+      </div>
+    </section>
+
+    <section class="library">
+      <div class="library-heading">
+        <div><p class="eyebrow">THƯ VIỆN CÔNG KHAI</p><h2>Tệp đã chia sẻ</h2></div>
+        <span id="fileCount" class="count">Đang tải…</span>
+      </div>
+      <div class="search-row">
+        <span class="search-icon">⌕</span>
+        <input id="searchInput" type="search" placeholder="Tìm theo tên tệp…" aria-label="Tìm theo tên tệp">
+      </div>
+      <div id="fileList" class="file-list">
+        <div class="empty-state">Đang tải danh sách tệp…</div>
+      </div>
+      <p class="footnote">Tệp và liên kết tải xuống đều công khai. Người tải lên chỉ có thể xóa tệp của chính mình. Không tải lên thông tin cá nhân hoặc nội dung nhạy cảm.</p>
+    </section>
+  </main>
+
+  <footer><span>FileShare</span><span>Được xây dựng với GitHub Pages + Supabase</span></footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
