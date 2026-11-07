@@ -101,7 +101,8 @@ async function uploadFile(file) {
   if (sessionError || !session) return setStatus("Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.", "error");
   const path = makeObjectPath(file, currentUser.id);
   let shareSlug;
-  try { shareSlug = await makeUniqueSlug(file.name); }
+  const requestedSlug = $("shareSlugInput").value.trim();
+  try { shareSlug = await makeUniqueSlug(requestedSlug || file.name); }
   catch (error) { return setStatus("Không thể tạo liên kết chia sẻ: " + error.message, "error"); }
   progressWrap.hidden = false;
   progressName.textContent = file.name;
@@ -155,7 +156,12 @@ async function uploadFile(file) {
 
     progressBar.style.width = "100%";
     progressPct.textContent = "100%";
-    setStatus("Tải lên thành công!", "success");
+    const requestedBase = requestedSlug ? slugifyFileName(requestedSlug) : "";
+    const customNameNote = requestedSlug
+      ? (shareSlug === requestedBase ? ` Đường dẫn: /${shareSlug}` : ` Tên đã tồn tại nên hệ thống đổi thành: /${shareSlug}`)
+      : ` Đường dẫn: /${shareSlug}`;
+    setStatus("Tải lên thành công!" + customNameNote, "success");
+    $("shareSlugInput").value = "";
     await loadFiles();
   } catch (error) {
     console.error(error);

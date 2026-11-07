@@ -45,6 +45,14 @@
 
     <section class="upload-card" aria-labelledby="upload-heading">
       <p id="uploadLoginHint" class="login-hint">Đăng nhập ở phía trên để tải tệp lên. Thư viện công khai vẫn có thể xem và tải mà không cần tài khoản.</p>
+      <div class="share-name-field">
+        <label for="shareSlugInput">Tên đường dẫn chia sẻ <span>(không bắt buộc)</span></label>
+        <div class="share-name-input-wrap">
+          <span>cupteahouse.github.io/fileshare/</span>
+          <input id="shareSlugInput" type="text" maxlength="70" autocomplete="off" spellcheck="false" placeholder="Ví dụ: anhtraihe">
+        </div>
+        <p>Để trống nếu muốn tự lấy tên từ file. Chỉ dùng chữ không dấu, số và dấu gạch ngang.</p>
+      </div>
       <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Chọn hoặc kéo thả tệp">
         <div class="upload-icon">↑</div>
         <h2 id="upload-heading">Thả tệp vào đây</h2>
