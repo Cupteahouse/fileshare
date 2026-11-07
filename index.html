@@ -30,7 +30,7 @@
           <label for="authEmail">Email</label>
           <input id="authEmail" type="email" autocomplete="email" placeholder="ban@example.com" required>
           <label for="authPassword">Mật khẩu</label>
-          <input id="authPassword" type="password" autocomplete="current-password" minlength="8" placeholder="Ít nhất 8 ký tự" required>
+          <input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Ít nhất 6 ký tự" required>
           <div class="auth-actions">
             <button id="signUpBtn" class="primary-btn" type="button">Tạo tài khoản</button>
             <button id="signInBtn" class="secondary-btn" type="button">Đăng nhập</button>
@@ -57,6 +57,20 @@
         <div class="progress-label"><span id="progressName">Đang tải lên…</span><strong id="progressPct">0%</strong></div>
         <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
       </div>
+    </section>
+
+    <section class="storage-card" aria-labelledby="storage-heading">
+      <div class="storage-topline">
+        <div><p class="eyebrow">TỔNG QUAN KHO LƯU TRỮ</p><h2 id="storage-heading">Dung lượng Storage</h2></div>
+        <span id="storageStatus" class="storage-status">Đang cập nhật…</span>
+      </div>
+      <div class="storage-numbers">
+        <div><strong id="storageUsed">—</strong><span>Đã sử dụng</span></div>
+        <div><strong id="storageRemaining">—</strong><span>Còn lại theo hạn mức</span></div>
+        <div><strong id="storageQuota">—</strong><span>Hạn mức</span></div>
+      </div>
+      <div class="storage-track" role="progressbar" aria-label="Tỷ lệ dung lượng đã sử dụng" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="storageBar" class="storage-bar"></div></div>
+      <p class="storage-note">Dung lượng đã dùng được tính trực tiếp từ các object trong Supabase Storage của project này.</p>
     </section>
 
     <section class="library">

@@ -6,6 +6,9 @@ const SUPABASE_URL = "https://uhyzpobxcvjvhiuzdfjc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_x3pPpndZj9xlse0HFtn_UA_AopAieSD";
 const BUCKET = "public-files";
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
+// Supabase hiện cấp 1 GB cho Free và 100 GB cho Pro/Team.
+// Nếu project thuộc gói khác, sửa giá trị này theo hạn mức của tổ chức Supabase.
+const STORAGE_QUOTA_BYTES = 1 * 1024 * 1024 * 1024;
 
 const $ = (id) => document.getElementById(id);
 const fileInput = $("fileInput"), dropzone = $("dropzone");
@@ -53,6 +56,30 @@ function makeObjectPath(file, userId) {
   return `${userId}/${id}${ext ? "." + ext : ""}`;
 }
 function projectRefFromUrl() { return new URL(SUPABASE_URL).hostname.split(".")[0]; }
+function slugifyFileName(name) {
+  const withoutExtension = String(name).replace(/\.[^.]+$/, "");
+  const slug = withoutExtension.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d").replace(/Đ/g, "d").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70).replace(/-+$/g, "");
+  return slug || "tep-tai-len";
+}
+async function makeUniqueSlug(name) {
+  const base = slugifyFileName(name);
+  for (let suffix = 1; suffix < 1000; suffix++) {
+    const candidate = suffix === 1 ? base : `${base}-${suffix}`;
+    const { data, error } = await supabase.from("files").select("id").eq("share_slug", candidate).maybeSingle();
+    if (error) throw error;
+    if (!data) return candidate;
+  }
+  return `${base}-${crypto.randomUUID().slice(0, 8)}`;
+}
+function getSharedSlugFromPath() {
+  const prefix = "/fileshare/";
+  if (!location.pathname.startsWith(prefix)) return null;
+  const tail = location.pathname.slice(prefix.length).split("/").filter(Boolean)[0];
+  if (!tail || tail === "index.html") return null;
+  try { return decodeURIComponent(tail); } catch { return tail; }
+}
 
 function updateAuthUI() {
   const signedIn = Boolean(currentUser);
@@ -73,6 +100,9 @@ async function uploadFile(file) {
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   if (sessionError || !session) return setStatus("Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.", "error");
   const path = makeObjectPath(file, currentUser.id);
+  let shareSlug;
+  try { shareSlug = await makeUniqueSlug(file.name); }
+  catch (error) { return setStatus("Không thể tạo liên kết chia sẻ: " + error.message, "error"); }
   progressWrap.hidden = false;
   progressName.textContent = file.name;
   progressBar.style.width = "0%";
@@ -118,7 +148,8 @@ async function uploadFile(file) {
       original_name: file.name,
       size_bytes: file.size,
       mime_type: file.type || "application/octet-stream",
-      owner_id: currentUser.id
+      owner_id: currentUser.id,
+      share_slug: shareSlug
     });
     if (dbError) throw new Error("Tệp đã tải lên Storage nhưng chưa lưu được thông tin: " + dbError.message);
 
@@ -139,7 +170,7 @@ async function loadFiles() {
   if (!supabase) return;
   fileList.innerHTML = '<div class="empty-state">Đang tải danh sách tệp…</div>';
   const { data, error } = await supabase.from("files")
-    .select("id, object_path, original_name, size_bytes, mime_type, created_at, owner_id")
+    .select("id, object_path, original_name, size_bytes, mime_type, created_at, owner_id, share_slug")
     .order("created_at", { ascending: false }).limit(200);
   if (error) {
     console.error(error);
@@ -150,10 +181,47 @@ async function loadFiles() {
   allFiles = data || [];
   $("fileCount").textContent = `${allFiles.length} tệp gần đây`;
   renderFiles();
+  await loadStorageUsage();
   const sharedId = new URLSearchParams(location.search).get("file");
-  if (sharedId && !autoDownloaded.has(sharedId)) {
+  const sharedSlug = getSharedSlugFromPath();
+  if (sharedSlug && !autoDownloaded.has(sharedSlug)) {
+    autoDownloaded.add(sharedSlug);
+    try {
+      const { data: record, error: lookupError } = await supabase.from("files")
+        .select("id").eq("share_slug", sharedSlug).maybeSingle();
+      if (lookupError) throw lookupError;
+      if (!record) { setStatus("Không tìm thấy tệp được chia sẻ.", "error"); return; }
+      await downloadFile(record.id);
+    } catch (error) {
+      console.error(error);
+      setStatus("Không thể mở liên kết chia sẻ. Hãy kiểm tra migration SQL đã được chạy chưa. " + error.message, "error");
+    }
+  } else if (sharedId && !autoDownloaded.has(sharedId)) {
     autoDownloaded.add(sharedId);
     downloadFile(sharedId);
+  }
+}
+
+async function loadStorageUsage() {
+  const status = $("storageStatus");
+  try {
+    const { data, error } = await supabase.rpc("get_project_storage_usage");
+    if (error) throw error;
+    const used = Math.max(0, Number(data) || 0);
+    const remaining = Math.max(0, STORAGE_QUOTA_BYTES - used);
+    const percent = Math.min(100, STORAGE_QUOTA_BYTES ? used / STORAGE_QUOTA_BYTES * 100 : 0);
+    $("storageUsed").textContent = formatBytes(used);
+    $("storageRemaining").textContent = formatBytes(remaining);
+    $("storageQuota").textContent = formatBytes(STORAGE_QUOTA_BYTES);
+    $("storageBar").style.width = `${percent}%`;
+    $("storageBar").parentElement.setAttribute("aria-valuenow", String(Math.round(percent)));
+    status.textContent = `${percent.toFixed(1)}% đã dùng`;
+  } catch (error) {
+    console.error("Storage usage:", error);
+    status.textContent = "Chưa có dữ liệu";
+    $("storageUsed").textContent = "—";
+    $("storageRemaining").textContent = "—";
+    $("storageQuota").textContent = formatBytes(STORAGE_QUOTA_BYTES);
   }
 }
 
@@ -221,8 +289,12 @@ async function deleteFile(id) {
   }
 }
 async function copyLink(id) {
-  const url = new URL(location.href);
-  url.search = `?file=${encodeURIComponent(id)}`;
+  const file = allFiles.find(item => item.id === id);
+  if (!file?.share_slug) {
+    setStatus("Tệp này chưa có mã chia sẻ. Hãy chạy file supabase_setup.sql mới.", "error");
+    return;
+  }
+  const url = new URL(`/fileshare/${encodeURIComponent(file.share_slug)}`, location.origin);
   try {
     await navigator.clipboard.writeText(url.toString());
     setStatus("Đã sao chép liên kết tải tệp.", "success");

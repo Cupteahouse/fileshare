@@ -28,7 +28,7 @@ Chỉ dùng publishable/anon key ở trình duyệt. **Không bao giờ đưa `s
 
 ## 3. Đưa lên GitHub Pages
 
-1. Tạo repository GitHub và tải các file `index.html`, `style.css`, `app.js`, `supabase_setup.sql`, `README.md` lên nhánh `main`.
+1. Tạo repository GitHub và tải các file `index.html`, `404.html`, `style.css`, `app.js`, `supabase_setup.sql`, `README.md` lên nhánh `main`. `404.html` là file bắt buộc để hỗ trợ URL ngắn theo path.
 2. Repository → Settings → Pages.
 3. Chọn Deploy from a branch → `main` → `/ (root)` → Save.
 4. Chờ URL GitHub Pages được cấp. Đảm bảo URL đó đã được thêm vào Supabase Auth URL Configuration.
@@ -52,9 +52,18 @@ Mở `http://localhost:8000`, và thêm URL này vào Redirect URLs trong Supaba
 - SQL RLS chỉ cho `authenticated` thêm metadata với `owner_id = auth.uid()` và chỉ cho chủ sở hữu xóa metadata.
 - Storage policy chỉ cho user đăng nhập upload/xóa object trong thư mục UUID của chính họ.
 - Public bucket cho phép đọc/tải object công khai; bảng metadata có policy SELECT công khai.
-- Danh sách hiển thị tối đa 200 tệp mới nhất. Link chia sẻ dạng `?file=<id>`.
+- Danh sách hiển thị tối đa 200 tệp mới nhất. Mỗi tệp có `share_slug` riêng; link chia sẻ ngắn dạng `https://cupteahouse.github.io/fileshare/ten-file`.
+- `404.html` là fallback cho GitHub Pages để đường dẫn `/fileshare/ten-file` vẫn mở được khi truy cập trực tiếp hoặc tải lại trang.
+- Thống kê Storage đọc tổng kích thước object trực tiếp từ `storage.objects` qua RPC `get_project_storage_usage`, không cộng từ bảng metadata `files`.
+- Hạn mức mặc định trong giao diện là 1 GB (Supabase Free). Nếu tổ chức dùng Pro/Team, đổi `STORAGE_QUOTA_BYTES` trong `app.js` thành `100 * 1024 * 1024 * 1024` (100 GB).
 
-## 6. Giới hạn và lưu ý an toàn
+## 6. Storage và hạn mức
+
+- Số đã dùng là tổng kích thước metadata của tất cả object trong mọi bucket thuộc **project Supabase này**. Đây là số liệu object thực tế, không phải tổng `size_bytes` trong bảng `files`, nên vẫn tính cả object chưa có metadata tương ứng.
+- Supabase áp dụng quota Storage ở cấp tổ chức và cộng usage giữa các project. RPC trên chỉ đọc được project hiện tại; nếu tổ chức có nhiều project, số “còn lại” hiển thị là ước tính theo project này, không thay thế Usage/Billing trong Supabase Dashboard.
+- Hạn mức giao diện mặc định 1 GB cho Free. Supabase hiện công bố 100 GB cho Pro/Team; hãy chỉnh `STORAGE_QUOTA_BYTES` trong `app.js` nếu gói của bạn khác. Xem https://supabase.com/docs/guides/platform/manage-your-usage/storage-size.
+
+## 7. Giới hạn và lưu ý an toàn
 
 - Giới hạn giao diện và bucket: 50 MiB/file. Hạn mức tổng Storage, băng thông/egress và giới hạn Free có thể thay đổi; kiểm tra https://supabase.com/pricing.
 - File public không phù hợp để lưu tài liệu riêng tư, thông tin cá nhân hoặc nội dung nhạy cảm. Ai có URL object có thể tải file.
